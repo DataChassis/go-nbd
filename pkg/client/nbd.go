@@ -13,10 +13,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/datachassis/go-nbd/pkg/ioctl"
+	"github.com/datachassis/go-nbd/pkg/protocol"
+	"github.com/datachassis/go-nbd/pkg/server"
 	"github.com/pilebones/go-udev/netlink"
-	"github.com/pojntfx/go-nbd/pkg/ioctl"
-	"github.com/pojntfx/go-nbd/pkg/protocol"
-	"github.com/pojntfx/go-nbd/pkg/server"
 )
 
 var (

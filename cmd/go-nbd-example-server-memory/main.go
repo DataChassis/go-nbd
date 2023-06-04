@@ -5,8 +5,8 @@ import (
 	"log"
 	"net"
 
-	"github.com/pojntfx/go-nbd/pkg/backend"
-	"github.com/pojntfx/go-nbd/pkg/server"
+	"github.com/datachassis/go-nbd/pkg/backend"
+	"github.com/datachassis/go-nbd/pkg/server"
 )
 
 func main() {
@@ -28,7 +28,7 @@ func main() {
 	}
 	defer l.Close()
 
-	log.Println("Listening on", l.Addr())
+	log.Printf("Listening on [%s]", l.Addr())
 
 	b := backend.NewMemoryBackend(make([]byte, *size))
 

@@ -10,7 +10,7 @@ type FileBackend struct {
 	lock sync.RWMutex
 }
 
-func NewFileBackend(file *os.File) *FileBackend {
+func NewFileBackend(file *os.File) Backend {
 	return &FileBackend{file, sync.RWMutex{}}
 }
 
@@ -46,3 +46,5 @@ func (b *FileBackend) Size() (int64, error) {
 func (b *FileBackend) Sync() error {
 	return b.file.Sync()
 }
+
+func (be *FileBackend) String() string { return "file backend" }

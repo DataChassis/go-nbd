@@ -1,13 +1,25 @@
+# Notes on fork
+
+DataChassis/go-nbd is a fork of the great work in pojntfx/go-nbd.
+
+It enhances the server code to:
+- make the main app code smaller
+- allow dynamic addition and removal of exposed devices
+- limit the connections to a device to a single use
+
+-----
+
 # go-nbd
 
 ![Logo](./docs/logo-readme.png)
 
 Pure Go NBD server and client library.
 
-[![hydrun CI](https://github.com/pojntfx/go-nbd/actions/workflows/hydrun.yaml/badge.svg)](https://github.com/pojntfx/go-nbd/actions/workflows/hydrun.yaml)
+[![hydrun CI](https://github.com/datachassis/go-nbd/actions/workflows/hydrun.yaml/badge.svg)](https://github.com/datachassis/go-nbd/actions/workflows/hydrun.yaml)
 ![Go Version](https://img.shields.io/badge/go%20version-%3E=1.20-61CFDD.svg)
-[![Go Reference](https://pkg.go.dev/badge/github.com/pojntfx/go-nbd.svg)](https://pkg.go.dev/github.com/pojntfx/go-nbd)
+[![Go Reference](https://pkg.go.dev/badge/github.com/datachassis/go-nbd.svg)](https://pkg.go.dev/github.com/datachassis/go-nbd)
 [![Matrix](https://img.shields.io/matrix/go-nbd:matrix.org)](https://matrix.to/#/#go-nbd:matrix.org?via=matrix.org)
+
 
 ## Overview
 
@@ -24,7 +36,7 @@ It enables you to ...
 You can add go-nbd to your Go project by running the following:
 
 ```shell
-$ go get github.com/pojntfx/go-nbd/...@latest
+$ go get github.com/datachassis/go-nbd/...@latest
 ```
 
 ## Usage
@@ -184,7 +196,7 @@ To contribute, please use the [GitHub flow](https://guides.github.com/introducti
 To build and start a development version of one of the examples locally, run the following:
 
 ```shell
-$ git clone https://github.com/pojntfx/go-nbd.git
+$ git clone https://github.com/datachassis/go-nbd.git
 $ cd go-nbd
 $ rm -f disk.img && truncate -s 10G disk.img && go run ./cmd/go-nbd-example-server-file .
 $ go run ./cmd/go-nbd-example-server-memory .

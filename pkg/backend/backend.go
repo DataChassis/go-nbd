@@ -8,4 +8,7 @@ type Backend interface {
 
 	Size() (int64, error)
 	Sync() error
+
+	// stringer interface, to provide info about this backend, mainly for logging
+	String() string
 }

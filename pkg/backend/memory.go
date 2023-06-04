@@ -10,7 +10,7 @@ type MemoryBackend struct {
 	lock   sync.Mutex
 }
 
-func NewMemoryBackend(memory []byte) *MemoryBackend {
+func NewMemoryBackend(memory []byte) Backend {
 	return &MemoryBackend{memory, sync.Mutex{}}
 }
 
@@ -53,3 +53,5 @@ func (b *MemoryBackend) Size() (int64, error) {
 func (b *MemoryBackend) Sync() error {
 	return nil
 }
+
+func (b *MemoryBackend) String() string { return "memory backend" }

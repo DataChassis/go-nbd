@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
+	"log"
 	"net"
+	"sync"
 
-	"github.com/pojntfx/go-nbd/pkg/backend"
-	"github.com/pojntfx/go-nbd/pkg/protocol"
+	"github.com/datachassis/go-nbd/pkg/backend"
+	"github.com/datachassis/go-nbd/pkg/protocol"
 )
 
 var (
@@ -23,8 +26,7 @@ const (
 type Export struct {
 	Name        string
 	Description string
-
-	Backend backend.Backend
+	Backend     backend.Backend
 }
 
 type Options struct {
@@ -32,6 +34,42 @@ type Options struct {
 	MinimumBlockSize   uint32
 	PreferredBlockSize uint32
 	MaximumBlockSize   uint32
+}
+
+// this is lazy, because I am in a hurry, it should be encapsulated properly
+var conn_mutex sync.Mutex
+var connections map[string][]string // map export names to a list of current connections
+func init()                         { connections = make(map[string][]string) }
+
+func connectExport(export *Export, conn net.Conn) error {
+	conn_mutex.Lock()
+	defer conn_mutex.Unlock()
+	conns, exists := connections[export.Name]
+	if exists {
+		if len(conns) > 0 && !serverInstance.Options().AllowMultipleConnections {
+			return fmt.Errorf("cannot connect multiple times to export [%s]", export.Name)
+		}
+		connections[export.Name] = append(conns, conn.RemoteAddr().String())
+	} else {
+		connections[export.Name] = []string{conn.RemoteAddr().String()}
+	}
+	return nil
+}
+
+func disconnectExport(export *Export, conn net.Conn) error {
+	conn_mutex.Lock()
+	defer conn_mutex.Unlock()
+	if conns, exists := connections[export.Name]; exists {
+		arr := make([]string, 0, len(conns)-1)
+		addr := conn.RemoteAddr().String()
+		for _, c := range conns {
+			if c != addr {
+				arr = append(arr, c)
+			}
+		}
+		connections[export.Name] = arr
+	}
+	return nil
 }
 
 func Handle(conn net.Conn, exports []Export, options *Options) error {
@@ -68,6 +106,9 @@ func Handle(conn net.Conn, exports []Export, options *Options) error {
 	}
 
 	var export *Export
+	log.Printf("negotiating connection from [%s]", conn.RemoteAddr())
+
+	// label used to break out of nested statements (for, switch)
 n:
 	for {
 		var optionHeader protocol.NegotiationOptionHeader
@@ -94,7 +135,10 @@ n:
 			for _, candidate := range exports {
 				if candidate.Name == string(exportName) {
 					export = &candidate
-
+					if err := connectExport(export, conn); err != nil {
+						return err
+					}
+					defer disconnectExport(export, conn)
 					break
 				}
 			}
@@ -247,6 +291,7 @@ n:
 			}
 
 			if optionHeader.ID == protocol.NEGOTIATION_ID_OPTION_GO {
+				// If this is a
 				break n
 			}
 		case protocol.NEGOTIATION_ID_OPTION_ABORT:
@@ -262,9 +307,9 @@ n:
 			return nil
 		case protocol.NEGOTIATION_ID_OPTION_LIST:
 			{
-				info := &bytes.Buffer{}
-
 				for _, export := range exports {
+					info := &bytes.Buffer{}
+
 					exportName := []byte(export.Name)
 
 					if err := binary.Write(info, binary.BigEndian, uint32(len(exportName))); err != nil {
@@ -274,19 +319,18 @@ n:
 					if err := binary.Write(info, binary.BigEndian, exportName); err != nil {
 						return err
 					}
-				}
 
-				if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationReplyHeader{
-					ReplyMagic: protocol.NEGOTIATION_MAGIC_REPLY,
-					ID:         optionHeader.ID,
-					Type:       protocol.NEGOTIATION_TYPE_REPLY_SERVER,
-					Length:     uint32(info.Len()),
-				}); err != nil {
-					return err
-				}
-
-				if _, err := io.Copy(conn, info); err != nil {
-					return err
+					if err := binary.Write(conn, binary.BigEndian, protocol.NegotiationReplyHeader{
+						ReplyMagic: protocol.NEGOTIATION_MAGIC_REPLY,
+						ID:         optionHeader.ID,
+						Type:       protocol.NEGOTIATION_TYPE_REPLY_SERVER,
+						Length:     uint32(info.Len()),
+					}); err != nil {
+						return err
+					}
+					if _, err := io.Copy(conn, info); err != nil {
+						return err
+					}
 				}
 			}
 
@@ -298,6 +342,8 @@ n:
 			}); err != nil {
 				return err
 			}
+			log.Printf("sent exports list to [%s]", conn.RemoteAddr())
+
 		default:
 			_, err := io.CopyN(io.Discard, conn, int64(optionHeader.Length)) // Discard the unknown option's data
 			if err != nil {
@@ -314,6 +360,9 @@ n:
 			}
 		}
 	}
+
+	log.Printf("starting transmission with [%s] for export [%s]", conn.RemoteAddr(), export.Name)
+	defer log.Printf("connection terminated from [%s] for export [%s]", conn.RemoteAddr(), export.Name)
 
 	// Transmission
 	b := make([]byte, maximumPacketSize)
@@ -410,4 +459,5 @@ n:
 			}
 		}
 	}
+
 }
