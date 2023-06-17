@@ -25,6 +25,7 @@ type Server interface {
 	Stop() error
 	AddExport(name string, description string, b BackendSupplier) error
 	RemoveExport(name string) error
+	ListExports() []string
 	Options() ServerOptions
 }
 
@@ -95,11 +96,19 @@ func (s *nbdServer) RemoveExport(name string) error {
 	return nil
 }
 
+func (s *nbdServer) ListExports() []string {
+	exports := make([]string, 0, len(s.exports))
+	for k := range s.exports {
+		exports = append(exports, k)
+	}
+	return exports
+}
+
 func (s *nbdServer) startLoop() {
 	for {
 		conn, err := s.socket.Accept()
 		if err != nil {
-			log.Printf("could not accept connection:", err)
+			log.Printf("could not accept connection: %s", err)
 			continue
 		}
 		go s.startServing(conn)

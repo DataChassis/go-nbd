@@ -82,7 +82,7 @@ func NewExt4Backend(filePath string, size int64) (Backend, error) {
 				return nil, fmt.Errorf("failed to make ext4 filesystem in [%s]: %w", filePath, err)
 			}
 		} else {
-			_, err = be.ExecuteCmd("e2fsck", "-f", devName)
+			_, err = be.ExecuteCmd("e2fsck", "-p", devName)
 			if err != nil {
 				return nil, fmt.Errorf("failed to run e2fsck against existing ext4 filesystem in [%s]: %w", filePath, err)
 			}
